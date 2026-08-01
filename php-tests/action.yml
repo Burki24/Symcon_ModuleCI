@@ -1,0 +1,74 @@
+name: Symcon module tests
+description: Sets up the test environment, validates PHP and JSON files, and runs the repository-specific test entry point.
+author: Burkhard Kneiseler
+
+inputs:
+  php-version:
+    description: PHP version used for the tests.
+    required: false
+    default: '8.5'
+  php-extensions:
+    description: Optional comma-separated PHP extensions installed by setup-php.
+    required: false
+    default: ''
+  setup-python:
+    description: Whether Python is set up for repository-specific test scripts.
+    required: false
+    default: 'true'
+  python-version:
+    description: Python version used when setup-python is enabled.
+    required: false
+    default: '3.13'
+  lint-php:
+    description: Whether all repository PHP files are checked with php -l.
+    required: false
+    default: 'true'
+  validate-json:
+    description: Whether all repository JSON files are decoded with JSON_THROW_ON_ERROR.
+    required: false
+    default: 'true'
+  test-command:
+    description: Repository-specific test command executed after the shared checks.
+    required: false
+    default: 'php tests/run.php'
+
+runs:
+  using: composite
+  steps:
+    - name: Setup PHP
+      if: ${{ inputs.php-extensions == '' }}
+      uses: shivammathur/setup-php@v2
+      with:
+        php-version: ${{ inputs.php-version }}
+        coverage: none
+
+    - name: Setup PHP with extensions
+      if: ${{ inputs.php-extensions != '' }}
+      uses: shivammathur/setup-php@v2
+      with:
+        php-version: ${{ inputs.php-version }}
+        extensions: ${{ inputs.php-extensions }}
+        coverage: none
+
+    - name: Setup Python
+      if: ${{ inputs.setup-python == 'true' }}
+      uses: actions/setup-python@v6
+      with:
+        python-version: ${{ inputs.python-version }}
+
+    - name: Lint PHP files
+      if: ${{ inputs.lint-php == 'true' }}
+      shell: bash
+      run: bash "$GITHUB_ACTION_PATH/scripts/lint-php.sh"
+
+    - name: Validate JSON files
+      if: ${{ inputs.validate-json == 'true' }}
+      shell: bash
+      run: php "$GITHUB_ACTION_PATH/scripts/validate-json.php" "$GITHUB_WORKSPACE"
+
+    - name: Run repository tests
+      if: ${{ inputs.test-command != '' }}
+      shell: bash
+      env:
+        SYMCON_CI_TEST_COMMAND: ${{ inputs.test-command }}
+      run: bash -euo pipefail -c "$SYMCON_CI_TEST_COMMAND"

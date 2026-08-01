@@ -1,0 +1,9 @@
+name: Symcon module style
+description: Runs the official Symcon PHP and JSON style check.
+author: Burkhard Kneiseler
+
+runs:
+  using: composite
+  steps:
+    - name: Check Symcon PHP and JSON style
+      uses: symcon/action-style@v3

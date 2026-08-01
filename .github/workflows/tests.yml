@@ -1,0 +1,26 @@
+name: Tests
+
+on:
+  push:
+    branches:
+      - '**'
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  tests:
+    name: tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Run shared CI tests
+        uses: ./php-tests
+        with:
+          setup-python: 'false'
+          test-command: php tests/run.php

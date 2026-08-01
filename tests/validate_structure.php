@@ -8,6 +8,7 @@ $errors = [];
 $requiredFiles = [
     '.github/workflows/style.yml',
     '.github/workflows/tests.yml',
+    '.gitmodules',
     '.style/.php-cs-fixer.php',
     '.style/json-check.php',
     'LICENSE',
@@ -17,6 +18,7 @@ $requiredFiles = [
     'php-tests/scripts/validate-json.php',
     'style/action.yml',
     'tests/run.php',
+    'tests/stubs/autoload.php',
     'tests/validate_structure.php'
 ];
 
@@ -32,6 +34,8 @@ $checks = [
         'using: composite',
         'uses: shivammathur/setup-php@v2',
         'uses: actions/setup-python@v6',
+        'name: Initialize repository submodules',
+        'git -C "$GITHUB_WORKSPACE" submodule update --init --recursive',
         "default: 'php tests/run.php'"
     ],
     'style/action.yml'            => [
@@ -63,6 +67,20 @@ foreach ($checks as $file => $needles) {
     foreach ($needles as $needle) {
         if (!str_contains($contents, $needle)) {
             $errors[] = $file . ' is missing required content: ' . $needle;
+        }
+    }
+}
+
+$gitmodules = file_get_contents($root . '/.gitmodules');
+if ($gitmodules === false) {
+    $errors[] = '.gitmodules cannot be read.';
+} else {
+    foreach ([
+        'url = https://github.com/symcon/StylePHP',
+        'url = https://github.com/symcon/SymconStubs'
+    ] as $submoduleUrl) {
+        if (!str_contains($gitmodules, $submoduleUrl)) {
+            $errors[] = '.gitmodules is missing required content: ' . $submoduleUrl;
         }
     }
 }

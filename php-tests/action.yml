@@ -19,6 +19,10 @@ inputs:
     description: Python version used when setup-python is enabled.
     required: false
     default: '3.13'
+  init-submodules:
+    description: Whether repository submodules are initialized recursively before the checks run.
+    required: false
+    default: 'true'
   lint-php:
     description: Whether all repository PHP files are checked with php -l.
     required: false
@@ -35,6 +39,15 @@ inputs:
 runs:
   using: composite
   steps:
+    - name: Initialize repository submodules
+      if: ${{ inputs.init-submodules == 'true' }}
+      shell: bash
+      run: |
+        if [[ -f "$GITHUB_WORKSPACE/.gitmodules" ]]; then
+          git -C "$GITHUB_WORKSPACE" submodule sync --recursive
+          git -C "$GITHUB_WORKSPACE" submodule update --init --recursive
+        fi
+
     - name: Setup PHP
       if: ${{ inputs.php-extensions == '' }}
       uses: shivammathur/setup-php@v2

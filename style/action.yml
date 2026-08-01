@@ -5,13 +5,5 @@ author: Burkhard Kneiseler
 runs:
   using: composite
   steps:
-    - name: Verify Symcon style configuration
-      shell: bash
-      run: |
-        if [[ ! -f ".style/.php-cs-fixer.php" ]]; then
-          echo "Missing .style/.php-cs-fixer.php in the checked-out repository." >&2
-          exit 1
-        fi
-
-    - name: Check Symcon PHP style
+    - name: Check Symcon PHP and JSON style
       uses: symcon/action-style@v3

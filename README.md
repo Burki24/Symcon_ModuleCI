@@ -11,8 +11,9 @@ The repository separates reusable CI logic from the modules themselves. Consumer
 
 ### `php-tests`
 
-The composite action prepares PHP and optionally Python, then performs the shared base checks:
+The composite action initializes repository submodules, prepares PHP and optionally Python, then performs the shared base checks:
 
+- recursive initialization of configured Git submodules
 - PHP syntax validation for all repository PHP files
 - JSON syntax validation for all repository JSON files
 - execution of one repository-specific test command
@@ -59,6 +60,7 @@ Available inputs:
 | `php-version` | `8.5` | PHP version for the test job |
 | `php-extensions` | empty | Optional comma-separated PHP extensions |
 | `setup-python` | `true` | Enables Python for local test scripts |
+| `init-submodules` | `true` | Initializes configured Git submodules recursively |
 | `python-version` | `3.13` | Python version when enabled |
 | `lint-php` | `true` | Runs `php -l` for repository PHP files |
 | `validate-json` | `true` | Decodes repository JSON files with strict error handling |
@@ -66,7 +68,7 @@ Available inputs:
 
 ### `style`
 
-The style action delegates to the official `symcon/action-style@v3` action. The checked-out consumer repository must contain `.style/.php-cs-fixer.php`; `json-check.php` is used automatically when present.
+The style action delegates directly to the official `symcon/action-style@v3` action. The consumer repository stores `symcon/StylePHP` as the `.style` Git submodule. The official action initializes that submodule and then runs the Symcon PHP and JSON style checks.
 
 Example consumer workflow:
 
@@ -94,6 +96,22 @@ jobs:
       - name: Run Symcon style check
         uses: Burki24/Symcon_ModuleCI/style@v1.0.0
 ```
+
+
+## Official Symcon submodules
+
+Repositories using this CI foundation should reference the official Symcon sources as Git submodules:
+
+```ini
+[submodule ".style"]
+    path = .style
+    url = https://github.com/symcon/StylePHP
+[submodule "tests/stubs"]
+    path = tests/stubs
+    url = https://github.com/symcon/SymconStubs
+```
+
+The `php-tests` action initializes configured submodules recursively before linting and repository-specific tests. The `style` action intentionally does not maintain its own style rules and relies exclusively on `symcon/action-style@v3`.
 
 ## Versioning and branches
 

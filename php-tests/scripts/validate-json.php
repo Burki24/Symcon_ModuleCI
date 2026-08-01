@@ -23,7 +23,8 @@ $errors = [];
 $directory = new RecursiveDirectoryIterator($root, FilesystemIterator::SKIP_DOTS);
 $filter = new RecursiveCallbackFilterIterator(
     $directory,
-    static function (SplFileInfo $file) use ($ignoredDirectories): bool {
+    static function (SplFileInfo $file) use ($ignoredDirectories): bool
+    {
         if (!$file->isDir()) {
             return true;
         }

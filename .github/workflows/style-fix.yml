@@ -1,0 +1,38 @@
+name: Test Style Fix
+
+on:
+  push:
+    branches:
+      - dev
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  style-fix:
+    name: style-fix
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Create intentionally unformatted fixture
+        shell: bash
+        run: |
+          cat > style-fix-fixture.php <<'PHP'
+          <?php
+          declare(strict_types=1);
+          $fixture=["foo"=>"bar"];
+          PHP
+
+      - name: Apply automatic Symcon style fixes without committing
+        uses: ./style-fix
+        with:
+          commit: 'false'
+          push: 'false'
+
+      - name: Verify official style accepts the fixed fixture
+        uses: ./style

@@ -97,6 +97,51 @@ jobs:
         uses: Burki24/Symcon_ModuleCI/style@v1.0.0
 ```
 
+### `style-fix`
+
+The `style-fix` action applies the same official `symcon/StylePHP` configuration used by the read-only style check, but runs PHP CS Fixer without `--dry-run`. It therefore automatically fixes rules such as `binary_operator_spaces`, `single_quote`, `ordered_imports`, `method_argument_space`, `braces_position`, blank-line rules, and the remaining official Symcon PHP style rules. The official JSON fixer is applied as well.
+
+By default, tracked changes are committed and pushed back to the currently checked out branch. Automatic pushes to `main` and `master` are blocked by default.
+
+Example for a normal development branch:
+
+```yaml
+permissions:
+  contents: write
+
+steps:
+  - name: Check out repository
+    uses: actions/checkout@v6
+    with:
+      fetch-depth: 0
+      ref: ${{ github.ref_name }}
+
+  - name: Apply automatic Symcon style fixes
+    uses: Burki24/Symcon_ModuleCI/style-fix@dev
+```
+
+Available inputs:
+
+| Input | Default | Purpose |
+|---|---|---|
+| `commit` | `true` | Creates a commit when tracked files were changed |
+| `push` | `true` | Pushes the generated commit to the checked out branch |
+| `commit-message` | `STYLE: Apply automatic Symcon style fixes` | Commit subject |
+| `commit-user-name` | `github-actions[bot]` | Commit author name |
+| `commit-user-email` | GitHub Actions bot noreply address | Commit author email |
+| `blocked-branches` | `main master` | Branches that the action must never push automatically |
+
+Outputs:
+
+| Output | Purpose |
+|---|---|
+| `changed` | `true` when tracked files were modified |
+| `committed` | `true` when an automatic style commit was created |
+| `commit-sha` | SHA of the generated style commit |
+
+For repositories that already have another workflow responsible for the final push, use `push: 'false'`. The style fixes are then committed locally and can be tested before the existing workflow pushes all commits together. This prevents competing automation workflows from racing each other.
+
+A checkout performed with the normal `GITHUB_TOKEN` can push changes, but that push normally does not start another push-triggered workflow. If follow-up workflows must run, check out with a GitHub App token or another suitable token that is allowed to trigger them.
 
 ## Official Symcon submodules
 
@@ -111,7 +156,7 @@ Repositories using this CI foundation should reference the official Symcon sourc
     url = https://github.com/symcon/SymconStubs
 ```
 
-The `php-tests` action initializes configured submodules recursively before linting and repository-specific tests. The `style` action intentionally does not maintain its own style rules and relies exclusively on `symcon/action-style@v3`.
+The `php-tests`, `style`, and `style-fix` actions intentionally do not maintain their own Symcon style rules. They rely on the official `symcon/StylePHP` configuration stored in the consumer repository's `.style` submodule.
 
 ## Versioning and branches
 
@@ -119,7 +164,7 @@ The `php-tests` action initializes configured submodules recursively before lint
 - `main` contains the stable released state.
 - Consumer repositories use a release tag such as `v1.0.0`, not `main` or `dev`.
 
-Before the first release, the actions can be tested temporarily from a consumer feature branch with `@dev`.
+New action versions should first be tested from a consumer development branch with `@dev`. After successful verification, publish a new release tag and switch consumers to that tag.
 
 ## Repository-specific tests
 

@@ -1,0 +1,160 @@
+name: Symcon module style fix
+description: Applies the official Symcon PHP and JSON style rules and optionally commits and pushes the fixes.
+author: Burkhard Kneiseler
+
+inputs:
+  commit:
+    description: Commit tracked style changes after applying the fixer.
+    required: false
+    default: 'true'
+  push:
+    description: Push the generated style commit to the currently checked out branch.
+    required: false
+    default: 'true'
+  commit-message:
+    description: Commit message used for automatic style fixes.
+    required: false
+    default: 'STYLE: Apply automatic Symcon style fixes'
+  commit-user-name:
+    description: Git author name used for the automatic style commit.
+    required: false
+    default: 'github-actions[bot]'
+  commit-user-email:
+    description: Git author email used for the automatic style commit.
+    required: false
+    default: '41898282+github-actions[bot]@users.noreply.github.com'
+  blocked-branches:
+    description: Space or comma separated branch names that must never be pushed automatically.
+    required: false
+    default: 'main master'
+
+outputs:
+  changed:
+    description: Whether tracked files were changed by the official Symcon style fixer.
+    value: ${{ steps.changes.outputs.changed }}
+  committed:
+    description: Whether the action created a style commit.
+    value: ${{ steps.commit.outputs.committed }}
+  commit-sha:
+    description: SHA of the generated style commit, if one was created.
+    value: ${{ steps.commit.outputs.commit-sha }}
+
+runs:
+  using: composite
+  steps:
+    - name: Validate style-fix inputs
+      shell: bash
+      env:
+        COMMIT_CHANGES: ${{ inputs.commit }}
+        PUSH_CHANGES: ${{ inputs.push }}
+      run: |
+        set -euo pipefail
+
+        if [[ "${PUSH_CHANGES}" == "true" && "${COMMIT_CHANGES}" != "true" ]]; then
+          echo "::error::The style-fix action cannot push without creating a commit."
+          exit 1
+        fi
+
+    - name: Initialize official Symcon style rules
+      shell: bash
+      run: |
+        set -euo pipefail
+        git submodule update --init -- .style
+
+    - name: Download PHP CS Fixer
+      shell: bash
+      run: |
+        set -euo pipefail
+        curl --fail --location --silent --show-error           https://cs.symfony.com/download/php-cs-fixer-v3.phar           --output "${RUNNER_TEMP}/php-cs-fixer-v3.phar"
+
+    - name: Apply official Symcon PHP style
+      shell: bash
+      run: |
+        set -euo pipefail
+        PHP_CS_FIXER_IGNORE_ENV=1 php "${RUNNER_TEMP}/php-cs-fixer-v3.phar" fix           --config=.style/.php-cs-fixer.php           --allow-risky=yes           --using-cache=no           -v
+
+    - name: Apply official Symcon JSON style
+      shell: bash
+      run: |
+        set -euo pipefail
+
+        if [[ -f ".style/json-check.php" ]]; then
+          php .style/json-check.php fix .
+        fi
+
+    - name: Verify fixed PHP style
+      shell: bash
+      run: |
+        set -euo pipefail
+        PHP_CS_FIXER_IGNORE_ENV=1 php "${RUNNER_TEMP}/php-cs-fixer-v3.phar" fix           --config=.style/.php-cs-fixer.php           --allow-risky=yes           --using-cache=no           --dry-run           -v
+        git diff --check
+
+    - name: Detect tracked style changes
+      id: changes
+      shell: bash
+      run: |
+        set -euo pipefail
+
+        if [[ -n "$(git status --porcelain --untracked-files=no)" ]]; then
+          echo "changed=true" >> "${GITHUB_OUTPUT}"
+        else
+          echo "changed=false" >> "${GITHUB_OUTPUT}"
+        fi
+
+    - name: Commit style changes
+      id: commit
+      if: ${{ inputs.commit == 'true' && steps.changes.outputs.changed == 'true' }}
+      shell: bash
+      env:
+        COMMIT_MESSAGE: ${{ inputs.commit-message }}
+        COMMIT_USER_NAME: ${{ inputs.commit-user-name }}
+        COMMIT_USER_EMAIL: ${{ inputs.commit-user-email }}
+      run: |
+        set -euo pipefail
+
+        changed_files=()
+        while IFS= read -r -d '' file; do
+          changed_files+=("${file}")
+        done < <(git diff --name-only -z --diff-filter=ACMRTUXB)
+
+        if (( ${#changed_files[@]} == 0 )); then
+          echo "committed=false" >> "${GITHUB_OUTPUT}"
+          exit 0
+        fi
+
+        git config user.name "${COMMIT_USER_NAME}"
+        git config user.email "${COMMIT_USER_EMAIL}"
+        git add -- "${changed_files[@]}"
+
+        if git diff --cached --quiet; then
+          echo "committed=false" >> "${GITHUB_OUTPUT}"
+          exit 0
+        fi
+
+        git commit -m "${COMMIT_MESSAGE}"
+        echo "committed=true" >> "${GITHUB_OUTPUT}"
+        echo "commit-sha=$(git rev-parse HEAD)" >> "${GITHUB_OUTPUT}"
+
+    - name: Push style commit
+      if: ${{ inputs.push == 'true' && steps.commit.outputs.committed == 'true' }}
+      shell: bash
+      env:
+        BLOCKED_BRANCHES: ${{ inputs.blocked-branches }}
+      run: |
+        set -euo pipefail
+
+        branch="$(git symbolic-ref --quiet --short HEAD || true)"
+        if [[ -z "${branch}" ]]; then
+          echo "::error::Automatic style pushes require a checked out branch, not a detached HEAD."
+          exit 1
+        fi
+
+        normalized_blocked="${BLOCKED_BRANCHES//,/ }"
+        for blocked in ${normalized_blocked}; do
+          if [[ -n "${blocked}" && "${branch}" == "${blocked}" ]]; then
+            echo "::error::Automatic style pushes are blocked for branch '${branch}'."
+            exit 1
+          fi
+        done
+
+        git push origin "HEAD:${branch}"

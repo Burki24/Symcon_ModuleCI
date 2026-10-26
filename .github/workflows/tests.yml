@@ -22,5 +22,5 @@ jobs:
       - name: Run shared CI tests
         uses: ./php-tests
         with:
-          setup-python: 'false'
+          setup-python: 'true'
           test-command: php tests/run.php

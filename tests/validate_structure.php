@@ -12,6 +12,9 @@ $requiredFiles = [
     '.style/.php-cs-fixer.php',
     '.style/json-check.php',
     'LICENSE',
+    'library-metadata/action.yml',
+    'library-metadata/update_library_metadata.py',
+    'tests/library_metadata.py',
     'README.md',
     'php-tests/action.yml',
     'php-tests/scripts/lint-php.sh',
@@ -29,6 +32,13 @@ foreach ($requiredFiles as $file) {
 }
 
 $checks = [
+    'library-metadata/action.yml' => [
+        'name: Symcon library metadata',
+        'using: composite',
+        'uses: actions/setup-python@v6',
+        'GITHUB_WORKSPACE',
+        'update_library_metadata.py'
+    ],
     'php-tests/action.yml'        => [
         'name: Symcon module tests',
         'using: composite',
@@ -85,7 +95,7 @@ if ($gitmodules === false) {
     }
 }
 
-foreach (['php-tests/action.yml', 'style/action.yml'] as $actionFile) {
+foreach (['php-tests/action.yml', 'style/action.yml', 'library-metadata/action.yml'] as $actionFile) {
     $contents = file_get_contents($root . '/' . $actionFile);
     if ($contents !== false && str_contains($contents, "\t")) {
         $errors[] = $actionFile . ' contains tab characters.';

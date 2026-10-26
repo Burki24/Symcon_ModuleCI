@@ -143,6 +143,64 @@ For repositories that already have another workflow responsible for the final pu
 
 A checkout performed with the normal `GITHUB_TOKEN` can push changes, but that push normally does not start another push-triggered workflow. If follow-up workflows must run, check out with a GitHub App token or another suitable token that is allowed to trigger them.
 
+### `library-metadata`
+
+Generates `version`, `build`, and `date` in the consumer's `library.json` using
+the existing OpenHomeAlarm/SymconECharts policy. All other fields are preserved.
+It does not commit, push, tag, publish, or access any module runtime.
+
+- `version`: keep the major number and increment the minor number once per
+  source commit in the push. Commits starting with
+  `CHORE: Update library metadata` do not count. A higher current version is
+  never lowered.
+- `build`: the first seven hexadecimal digits of the source SHA as an integer.
+- `date`: the source commit's Unix timestamp.
+- An unavailable/zero `before-sha` falls back to one increment. A repeated run
+  for the same source and push range preserves the generated metadata.
+- A source already superseded by another source commit is skipped. Later
+  metadata-only commits are allowed, so rerunning a completed job is safe.
+
+Use a full-history checkout of the development branch and run the consumer's
+tests first. Pass the push event's full `github.sha` and `github.event.before`:
+
+```yaml
+- name: Generate library metadata
+  id: metadata
+  uses: Burki24/Symcon_ModuleCI/library-metadata@dev
+  with:
+    source-sha: ${{ github.sha }}
+    before-sha: ${{ github.event.before }}
+```
+
+This new action is initially tested with `@dev`; switch to the next published
+ModuleCI release tag after verification. Existing actions remain on their
+current release tag.
+
+Outputs: `changed` (`true`/`false`), `version`, `short-sha`, and `skipped`
+(empty, `metadata-only`, or `superseded`). Only publish when `changed` is true.
+The caller owns authentication and the final commit, limited to `library.json`.
+It must skip metadata-only pushes to prevent a loop and must never force-push.
+A normal non-fast-forward rejection protects newer branch changes; rerun the
+latest source workflow if the branch advanced during validation.
+
+When the generated commit must start follow-up tests/style workflows, use an
+installed GitHub App with Contents write access for checkout/push, rather than
+the default `GITHUB_TOKEN`. SymconiCloud uses the existing repository variable
+`HELPER_SYNC_APP_CLIENT_ID` and secret `HELPER_SYNC_APP_PRIVATE_KEY`. Never store
+the private key in a workflow or the repository.
+
+Local validation requires PHP and Python 3.10 or newer:
+
+```bash
+php tests/run.php
+```
+
+To inspect a consumer's proposed metadata without changing its files:
+
+```bash
+python library-metadata/update_library_metadata.py --root /path/to/consumer --source-sha FULL_SOURCE_SHA --before-sha FULL_BEFORE_SHA --dry-run
+```
+
 ## Official Symcon submodules
 
 Repositories using this CI foundation should reference the official Symcon sources as Git submodules:

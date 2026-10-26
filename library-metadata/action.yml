@@ -1,0 +1,46 @@
+name: Symcon library metadata
+description: Derives library version, build and date from the triggering source commits without publishing.
+author: Burkhard Kneiseler
+
+inputs:
+  source-sha:
+    description: Full SHA of the push event being versioned.
+    required: true
+  before-sha:
+    description: Full SHA before the push, or the zero SHA for a new branch.
+    required: false
+    default: ''
+
+outputs:
+  changed:
+    description: Whether library.json was changed.
+    value: ${{ steps.metadata.outputs.changed }}
+  version:
+    description: Resulting major.minor version.
+    value: ${{ steps.metadata.outputs.version }}
+  short-sha:
+    description: First seven characters of the source SHA.
+    value: ${{ steps.metadata.outputs.short-sha }}
+  skipped:
+    description: Empty, metadata-only, or superseded.
+    value: ${{ steps.metadata.outputs.skipped }}
+
+runs:
+  using: composite
+  steps:
+    - name: Set up Python
+      uses: actions/setup-python@v6
+      with:
+        python-version: '3.13'
+
+    - name: Derive library metadata
+      id: metadata
+      shell: bash
+      env:
+        SOURCE_SHA: ${{ inputs.source-sha }}
+        BEFORE_SHA: ${{ inputs.before-sha }}
+      run: |
+        python "$GITHUB_ACTION_PATH/update_library_metadata.py" \
+          --root "$GITHUB_WORKSPACE" \
+          --source-sha "$SOURCE_SHA" \
+          --before-sha "$BEFORE_SHA"

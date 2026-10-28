@@ -16,6 +16,7 @@ The composite action initializes repository submodules, prepares PHP and optiona
 - recursive initialization of configured Git submodules
 - PHP syntax validation for all repository PHP files
 - JSON syntax validation for all repository JSON files
+- read-only encoding validation of own project text files (UTF-8 and typical corrupted German characters)
 - execution of one repository-specific test command
 
 The default test command is:
@@ -64,6 +65,7 @@ Available inputs:
 | `python-version` | `3.13` | Python version when enabled |
 | `lint-php` | `true` | Runs `php -l` for repository PHP files |
 | `validate-json` | `true` | Decodes repository JSON files with strict error handling |
+| `check-encoding` | `true` | Checks own text files; bundled upstream sources and dependencies are excluded |
 | `test-command` | `php tests/run.php` | Repository-specific test entry point |
 
 ### `style`
@@ -229,3 +231,41 @@ New action versions should first be tested from a consumer development branch wi
 The central action intentionally does not know the internal test files of a module. Each consumer provides a single stable entry point at `tests/run.php`. That file can call PHP, Python, shell, or Node.js tests required by the module.
 
 This preserves module-specific coverage while keeping workflow names, setup, linting, JSON validation, and Ruleset checks uniform.
+
+## Shared text encoding check
+
+The canonical implementation is `php-tests/scripts/check-encoding.php`. The
+`php-tests` action runs it before repository tests with `check-encoding: 'true'`
+by default. Z2MAutomations adopts this addition from `@main` as explicitly
+requested; the central changes must be present on that branch before its CI
+runs. Existing `v1.0.0` consumers and published tags remain unchanged.
+
+Run the same check locally against an explicit repository:
+
+```bash
+php /path/to/Symcon_ModuleCI/php-tests/scripts/check-encoding.php /path/to/library
+```
+
+It reports relative file paths and line numbers and exits with 1 on findings.
+It checks invalid UTF-8, Unicode replacement characters and known single/double
+Windows-1252 or Latin-1 corruption patterns of German characters. This is a
+focused heuristic, not a general language validator. Intentional malformed test
+inputs must use Unicode or byte escapes. It never rewrites files.
+
+Own PHP, Markdown, JSON, JavaScript/TypeScript, YAML, HTML, CSS, SVG and text
+files are checked, together with LICENSE and common repository configuration
+files. `.git`, `.style`, `tests/stubs`, `libs/helper`, `libs/vendor`, `vendor`,
+`node_modules` and local preview/IDE folders are excluded. Symbolic links are
+not followed. Other binary types and `.env` files are not read.
+
+For consumer-local test commands, the composite action exports
+`SYMCON_MODULE_CI_ROOT` pointing to this action checkout. A consumer can use
+that variable to load the canonical script; locally it may use an adjacent
+`Symcon_ModuleCI` checkout. Fail clearly when the shared source is missing;
+do not silently skip or download code during tests. Keep the implementation
+and its regression suite here rather than copying them into each library.
+
+Z2MAutomations is the initial consumer and references `php-tests@main` for this
+integration. Make the central implementation available on main before running
+the consumer workflow.
+Publishing a release or changing other libraries is a separate task.

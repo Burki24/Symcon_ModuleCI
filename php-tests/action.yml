@@ -31,6 +31,10 @@ inputs:
     description: Whether all repository JSON files are decoded with JSON_THROW_ON_ERROR.
     required: false
     default: 'true'
+  check-encoding:
+    description: Whether own project text files are checked for invalid UTF-8 and damaged German characters.
+    required: false
+    default: 'true'
   test-command:
     description: Repository-specific test command executed after the shared checks.
     required: false
@@ -79,9 +83,15 @@ runs:
       shell: bash
       run: php "$GITHUB_ACTION_PATH/scripts/validate-json.php" "$GITHUB_WORKSPACE"
 
+    - name: Check project text encoding
+      if: ${{ inputs.check-encoding == 'true' }}
+      shell: bash
+      run: php "$GITHUB_ACTION_PATH/scripts/check-encoding.php" "$GITHUB_WORKSPACE"
+
     - name: Run repository tests
       if: ${{ inputs.test-command != '' }}
       shell: bash
       env:
+        SYMCON_MODULE_CI_ROOT: ${{ github.action_path }}/..
         SYMCON_CI_TEST_COMMAND: ${{ inputs.test-command }}
       run: bash -euo pipefail -c "$SYMCON_CI_TEST_COMMAND"

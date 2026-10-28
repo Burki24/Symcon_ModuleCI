@@ -19,6 +19,8 @@ $requiredFiles = [
     'php-tests/action.yml',
     'php-tests/scripts/lint-php.sh',
     'php-tests/scripts/validate-json.php',
+    'php-tests/scripts/check-encoding.php',
+    'tests/encoding.php',
     'style/action.yml',
     'tests/run.php',
     'tests/stubs/autoload.php',
@@ -44,6 +46,9 @@ $checks = [
         'using: composite',
         'uses: shivammathur/setup-php@v2',
         'uses: actions/setup-python@v6',
+        'name: Check project text encoding',
+        'inputs.check-encoding',
+        'SYMCON_MODULE_CI_ROOT: ${{ github.action_path }}/..',
         'name: Initialize repository submodules',
         'git -C "$GITHUB_WORKSPACE" submodule update --init --recursive',
         "default: 'php tests/run.php'"

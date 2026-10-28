@@ -2,8 +2,14 @@
 
 declare(strict_types=1);
 
+$encoding = proc_open([PHP_BINARY, __DIR__ . '/../php-tests/scripts/check-encoding.php', dirname(__DIR__)], [STDIN, STDOUT, STDERR], $pipes, dirname(__DIR__));
+if (!is_resource($encoding) || proc_close($encoding) !== 0) {
+    exit(1);
+}
+
 $tests = [
-    __DIR__ . '/validate_structure.php'
+    __DIR__ . '/validate_structure.php',
+    __DIR__ . '/encoding.php'
 ];
 
 foreach ($tests as $test) {

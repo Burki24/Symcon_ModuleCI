@@ -236,9 +236,9 @@ This preserves module-specific coverage while keeping workflow names, setup, lin
 
 The canonical implementation is `php-tests/scripts/check-encoding.php`. The
 `php-tests` action runs it before repository tests with `check-encoding: 'true'`
-by default. This addition is developed on `@dev`; an existing `v1.0.0` consumer
-will not gain it until it deliberately adopts this development version or a
-future release. No existing tag is changed.
+by default. Z2MAutomations adopts this addition from `@main` as explicitly
+requested; the central changes must be present on that branch before its CI
+runs. Existing `v1.0.0` consumers and published tags remain unchanged.
 
 Run the same check locally against an explicit repository:
 
@@ -265,6 +265,7 @@ that variable to load the canonical script; locally it may use an adjacent
 do not silently skip or download code during tests. Keep the implementation
 and its regression suite here rather than copying them into each library.
 
-Z2MAutomations is the initial consumer and references `php-tests@dev` for this
-integration. Push the central implementation before the consumer workflow.
+Z2MAutomations is the initial consumer and references `php-tests@main` for this
+integration. Make the central implementation available on main before running
+the consumer workflow.
 Publishing a release or changing other libraries is a separate task.

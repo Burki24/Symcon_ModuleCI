@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Central implementation of the existing per-source-commit library version policy."""
+"""Central source-commit metadata policy for libraries and applications."""
 
 from __future__ import annotations
 
@@ -19,6 +19,8 @@ APPLICATION_VERSION_PATTERN = re.compile(r'^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0
 
 
 def version_tuple(value: object, target: str = 'library') -> tuple[int, ...]:
+    if target not in {'library', 'application'}:
+        raise SystemExit('Unsupported metadata target.')
     pattern = APPLICATION_VERSION_PATTERN if target == 'application' else VERSION_PATTERN
     match = pattern.fullmatch(value) if isinstance(value, str) else None
     if match is None:
@@ -67,7 +69,7 @@ def plan(root: Path, library: dict, source: str, before: str, target: str = 'lib
         base_library = json.loads(blob) if blob is not None else library
         base_version = version_tuple(base_library.get('version'), target)
     except (json.JSONDecodeError, AttributeError) as error:
-        raise SystemExit('Invalid base library metadata.') from error
+        raise SystemExit(f'Invalid base {target} metadata.') from error
     increment = 1
     if valid_before:
         subjects = git(root, 'log', '--format=%s', f'{before}..{source}').splitlines()

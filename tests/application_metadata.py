@@ -78,6 +78,16 @@ class ApplicationMetadataTests(unittest.TestCase):
                 self.plan()
         with self.assertRaises(SystemExit):
             metadata.plan(cases.ROOT, {}, cases.SOURCE, cases.BEFORE, '../outside')
+        with self.assertRaises(SystemExit):
+            metadata.version_tuple('1.2', 'unsupported')
+
+    def test_application_mode_does_not_change_the_library_format(self):
+        self.assertEqual(metadata.version_tuple('0.180'), (0, 180))
+        self.assertEqual(metadata.version_tuple('0.1.0', 'application'), (0, 1, 0))
+        with self.assertRaises(SystemExit):
+            metadata.version_tuple('0.1.0')
+        with self.assertRaises(SystemExit):
+            metadata.version_tuple('0.180', 'application')
 
     def test_cli_updates_only_application_metadata(self):
         with tempfile.TemporaryDirectory() as directory:

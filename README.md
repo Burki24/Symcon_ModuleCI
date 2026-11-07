@@ -163,6 +163,14 @@ The consumer uses its existing GitHub App workflow to commit only `version.json`
 No PHP runtime or Symcon module metadata is required in the application repository.
 The existing library target and its two-component version format remain unchanged.
 
+Consumers referencing `application-metadata@main` can run only after this action
+and its sibling `library-metadata/update_library_metadata.py` have been merged
+to `main`. Committing them on `dev` alone does not make the action available.
+Keep the consumer on `main`; do not temporarily redirect it to a development
+branch. Review and merge through the normal repository workflow, then rerun a
+failed consumer workflow or push the next source change. Metadata generation
+does not replace release approval.
+
 ### `library-metadata`
 
 Generates `version`, `build`, and `date` in the consumer's `library.json` using

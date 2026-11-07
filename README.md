@@ -145,6 +145,24 @@ For repositories that already have another workflow responsible for the final pu
 
 A checkout performed with the normal `GITHUB_TOKEN` can push changes, but that push normally does not start another push-triggered workflow. If follow-up workflows must run, check out with a GitHub App token or another suitable token that is allowed to trigger them.
 
+### `application-metadata`
+
+Uses the same central implementation as `library-metadata`, with an explicit
+application target. It updates only `version.json`, containing `version`, `build`
+and `date`. Application versions use `major.minor.patch`, suitable for Electron.
+Each source commit increments the minor component and resets the patch to zero,
+for example `0.1.0` to `0.2.0`. Higher manually selected versions are preserved.
+
+Pass `source-sha` and `before-sha` after a full-history checkout and successful
+consumer checks. Outputs match `library-metadata`. Metadata-only commits start
+with `CHORE: Update application metadata` and are excluded from counting and
+recursion. Retries are idempotent; superseded source pushes are skipped.
+
+This action generates metadata only; it does not commit, push or publish.
+The consumer uses its existing GitHub App workflow to commit only `version.json`.
+No PHP runtime or Symcon module metadata is required in the application repository.
+The existing library target and its two-component version format remain unchanged.
+
 ### `library-metadata`
 
 Generates `version`, `build`, and `date` in the consumer's `library.json` using
